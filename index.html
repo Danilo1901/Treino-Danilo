@@ -26,7 +26,7 @@ footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px sol
 @media(min-width:600px){footer{position:static;background:transparent;border:0;padding:0;margin-top:10px}}
 </style></head>
 <body>
-<header><h1>🏋️‍♀️ Meu Treino</h1><div class="sub">Evolução da Danilo</div></header>
+<header><h1>🏋️‍♀️ Meu Treino</h1><div class="sub">Evolução Danilo</div></header>
 <main><div id="top"></div><div id="app"></div></main><footer id="footer" style="display:none"></footer>
 <script>
 const DEFAULT_WORKOUTS={
@@ -101,7 +101,7 @@ function renderTabs(){
 }
 function go(t){tab=t;render()}
 function render(){renderTabs();let app=document.getElementById("app");let footer=document.getElementById("footer");footer.style.display=tab==="treino"?"flex":"none";footer.innerHTML=tab==="treino"?'<button class="btn green" onclick="saveToday()">💾 Salvar treino de hoje</button>':"";if(tab==="home")home(app);else if(tab==="treino")treino(app);else if(tab==="historico")historico(app);else if(tab==="evolucao")evolucao(app);else if(tab==="personal")personalTab(app);else if(tab==="compartilhar")compartilhar(app);else configPage(app)}
-function home(a){a.innerHTML=`<div class="section-title">Bora treinar 👰</div>
+function home(a){a.innerHTML=`<div class="section-title">Bora treinar </div>
 <div class="grid"><div class="stat"><span class="muted">Dias de treino</span><b>${new Set(data.map(x=>x.date)).size}</b></div><div class="stat"><span class="muted">Exercícios</span><b>${new Set(data.map(x=>x.exercise)).size}</b></div></div>
 <div class="card"><div class="title">Começar</div><div class="actions"><button class="btn" onclick="go('treino')">Registrar treino</button><button class="btn secondary" onclick="go('evolucao')">Ver evolução</button></div></div>`}
 function lastFor(ex){let r=data.filter(x=>x.exercise===ex);return r.length?r[r.length-1]:null}

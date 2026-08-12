@@ -1,2 +1,2 @@
-# Treino-Danilo
-Meu primeiro treino
+# meu-treino
+Aplicativo pessoal para registro e progressão de treinos

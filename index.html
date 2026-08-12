@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meu Treino">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Meu Treino</title>
+<style>
+:root{
+  --bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
+  --accent:#111827;--green:#15803d;--red:#b91c1c;--soft:#f9fafb
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#111827;color:#fff;padding:calc(18px + env(safe-area-inset-top)) 18px 18px;position:sticky;top:0;z-index:5}
+h1{margin:0 0 3px;font-size:24px}.sub{font-size:13px;opacity:.75}
+main{max-width:760px;margin:auto;padding:14px 14px 100px}
+.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:14px;padding-bottom:2px}
+.tab{border:0;background:#e5e7eb;border-radius:12px;padding:10px 13px;font-weight:800;white-space:nowrap}
+.tab.active{background:#111827;color:#fff}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px #00000008}
+.title{font-weight:850;font-size:17px}.meta,.muted{color:var(--muted);font-size:13px}.meta{margin-top:4px}
+.btn{border:0;border-radius:11px;padding:12px 14px;background:#111827;color:#fff;font-weight:800}
+.btn.secondary{background:#e5e7eb;color:#111827}.btn.green{background:#15803d}.btn.red{background:#fee2e2;color:#991b1b}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stat{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:20px;margin-top:3px}
+.row{display:grid;grid-template-columns:34px 1fr 1fr;gap:7px;align-items:center;margin-top:9px}
+.row input{width:100%;padding:11px 8px;border:1px solid var(--line);border-radius:10px;font-size:16px}
+.series{text-align:center;font-weight:800}.actions{display:flex;gap:8px;margin-top:12px}.actions>*{flex:1}
+.setting{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:14px;margin:8px 0;font-weight:800}
+input[type=text],input[type=number],input[type=date],select{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font-size:16px;background:#fff}
+.field{margin-bottom:10px}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.section-title{font-weight:850;font-size:19px;margin:6px 0 10px}
+.empty{text-align:center;color:var(--muted);padding:28px 8px}
+.chart-wrap{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff;padding:8px;margin-top:10px}
+svg.chart{width:100%;height:220px;display:block}
+.chart-label{font-size:11px;fill:#6b7280}
+.chart-grid{stroke:#e5e7eb;stroke-width:1}.chart-line{fill:none;stroke:#111827;stroke-width:3}
+.chart-dot{fill:#111827}.chart-area{fill:#11182710}
+.measure-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.history-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.history-row:last-child{border-bottom:0}
+footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:9px 14px calc(9px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:6}
+footer>*{flex:1}
+@media(min-width:600px){footer{position:static;background:transparent;border:0;padding:0;margin-top:10px}}
+@media(max-width:430px){.grid3{grid-template-columns:1fr 1fr}.measure-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏋️‍♀️ Meu Treino</h1>
+  <div class="sub">Evolução Danilo</div>
+</header>
+<main>
+  <div id="top"></div>
+  <div id="app"></div>
+</main>
+<footer id="footer" style="display:none"></footer>
+
+<script>
+const DEFAULT_WORKOUTS={
+  A:{name:"Quadríceps e Ombro",ex:[["Cadeira adutora",3,10],["Agachamento livre",3,10],["Cadeira extensora",3,10],["Desenvolvimento máquina/halter",3,10],["Elevação lateral",3,10]]},
+  B:{name:"Superiores",ex:[["Puxada alta aberta",3,10],["Remada máquina",3,10],["Rosca direta polia",3,10],["Tríceps na polia",3,10],["Abdômen supra",3,25],["Panturrilha em pé",3,10]]},
+  C:{name:"",ex:[["Cadeira abdutora",3,10],["Mesa flexora",3,10],["Elevação de quadril",3,10],["Supino reto máquina",3,10],["Voador",3,10],["Prancha isométrica",3,30]]}
+};
+const DEFAULT_DAY_ORDER=["A","B","C"];
+
+let workouts=JSON.parse(localStorage.getItem("meuTreinoWorkouts")||"null")||JSON.parse(JSON.stringify(DEFAULT_WORKOUTS));
+let dayOrder=JSON.parse(localStorage.getItem("meuTreinoDayOrder")||"null")||DEFAULT_DAY_ORDER.slice();
+let data=JSON.parse(localStorage.getItem("meuTreinoV2")||"[]");
+let measures=JSON.parse(localStorage.getItem("meuTreinoMedidas")||"[]");
+let current=dayOrder[0]||"A",tab="home",selectedExercise=null;
+
+function persistPlan(){
+  localStorage.setItem("meuTreinoWorkouts",JSON.stringify(workouts));
+  localStorage.setItem("meuTreinoDayOrder",JSON.stringify(dayOrder));
+}
+function saveData(){localStorage.setItem("meuTreinoV2",JSON.stringify(data))}
+function saveMeasures(){localStorage.setItem("meuTreinoMedidas",JSON.stringify(measures))}
+
+function renderTabs(){
+  document.getElementById("top").innerHTML=`<div class="tabs">
+    <button class="tab ${tab==="home"?"active":""}" onclick="go('home')">🏠 Início</button>
+    <button class="tab ${tab==="treino"?"active":""}" onclick="go('treino')">🏋️ Treino</button>
+    <button class="tab ${tab==="historico"?"active":""}" onclick="go('historico')">Histórico</button>
+    <button class="tab ${tab==="evolucao"?"active":""}" onclick="go('evolucao')">📈 Evolução</button>
+    <button class="tab ${tab==="medidas"?"active":""}" onclick="go('medidas')">📏 Medidas</button>
+    <button class="tab ${tab==="personal"?"active":""}" onclick="go('personal')">🧑‍🏫 Personal</button>
+    <button class="tab ${tab==="config"?"active":""}" onclick="go('config')">⚙️</button>
+  </div>`;
+}
+function go(t){tab=t;render()}
+function render(){
+  renderTabs();
+  const app=document.getElementById("app"),footer=document.getElementById("footer");
+  footer.style.display=tab==="treino"?"flex":"none";
+  footer.innerHTML=tab==="treino"?'<button class="btn green" onclick="saveToday()">💾 Salvar treino de hoje</button>':"";
+  if(tab==="home")home(app);
+  else if(tab==="treino")treino(app);
+  else if(tab==="historico")historico(app);
+  else if(tab==="evolucao")evolucao(app);
+  else if(tab==="medidas")medidas(app);
+  else if(tab==="personal")personalTab(app);
+  else configPage(app);
+}
+
+function home(a){
+  const days=new Set(data.map(x=>x.date)).size;
+  const exs=new Set(data.map(x=>x.exercise)).size;
+  const latestM=measures.length?measures.slice().sort((a,b)=>a.date.localeCompare(b.date)).at(-1):null;
+  a.innerHTML=`<div class="section-title">Bora treinar</div>
+  <div class="grid3">
+    <div class="stat"><span class="muted">Dias de treino</span><b>${days}</b></div>
+    <div class="stat"><span class="muted">Exercícios</span><b>${exs}</b></div>
+    <div class="stat"><span class="muted">Peso atual</span><b>${latestM&&latestM.weight?latestM.weight+" kg":"—"}</b></div>
+  </div>
+  <div class="card"><div class="title">Começar</div>
+    <div class="actions"><button class="btn" onclick="go('treino')">Registrar treino</button><button class="btn secondary" onclick="go('evolucao')">Ver evolução</button></div>
+    <div class="actions"><button class="btn secondary" onclick="go('medidas')">Registrar peso e medidas</button></div>
+  </div>`;
+}
+
+function lastFor(ex){let r=data.filter(x=>x.exercise===ex);return r.length?r[r.length-1]:null}
+
+function treino(a){
+  let w=workouts[current];if(!w){current=dayOrder[0];w=workouts[current]}
+  let h=`<div class="tabs">${dayOrder.map(d=>`<button class="tab ${current===d?"active":""}" onclick="current='${d}';render()">${d}</button>`).join("")}</div>
+  <div class="section-title">Treino ${current}${w.name?" — "+w.name:""}</div>`;
+  if(!w.ex.length)h+='<div class="empty">Nenhum exercício neste treino ainda.</div>';
+  w.ex.forEach((e,i)=>{
+    let last=lastFor(e[0]);
+    h+=`<div class="card"><div class="title">${e[0]}</div><div class="meta">Meta: ${e[1]} × ${e[2]}${last?" · Último: "+last.sets.map(s=>s.weight+" kg × "+s.reps).join(" / "):""}</div>`;
+    for(let s=0;s<e[1];s++)h+=`<div class="row"><div class="series">${s+1}</div><input inputmode="decimal" placeholder="kg" data-ex="${i}" data-s="${s}" data-k="weight"><input inputmode="numeric" placeholder="${e[0].toLowerCase().includes("prancha")?"segundos":"reps"}" data-ex="${i}" data-s="${s}" data-k="reps"></div>`;
+    h+=`<div class="actions"><button class="btn secondary" onclick="copyLast(${i})">↻ Último</button></div></div>`;
+  });
+  a.innerHTML=h;
+}
+function collect(){let o={};document.querySelectorAll("[data-ex]").forEach(el=>{let i=el.dataset.ex,s=el.dataset.s,k=el.dataset.k;o[i]??=[];o[i][s]??={weight:"",reps:""};o[i][s][k]=el.value});return o}
+function saveToday(){
+  const sets=collect(),date=new Date().toISOString().slice(0,10),rows=[];
+  Object.entries(sets).forEach(([i,arr])=>arr.forEach(s=>{if(s.weight||s.reps)rows.push({date,workout:current,exercise:workouts[current].ex[i][0],sets:[s]})}));
+  if(!rows.length)return alert("Preencha pelo menos uma série.");
+  data.push(...rows);saveData();alert("Treino salvo neste iPhone!");render();
+}
+function copyLast(i){
+  let l=lastFor(workouts[current].ex[i][0]);if(!l)return alert("Ainda não há histórico.");
+  l.sets.forEach((s,n)=>{let w=document.querySelector(`[data-ex="${i}"][data-s="${n}"][data-k="weight"]`),r=document.querySelector(`[data-ex="${i}"][data-s="${n}"][data-k="reps"]`);if(w)w.value=s.weight;if(r)r.value=s.reps})
+}
+
+function historico(a){
+  if(!data.length)return a.innerHTML='<div class="empty">Nenhum treino salvo.</div>';
+  let g={};data.forEach(x=>(g[x.date]??=[]).push(x));
+  a.innerHTML='<div class="section-title">Histórico</div>'+Object.entries(g).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,r])=>`<div class="card">
+    <div class="title">${new Date(d+"T12:00:00").toLocaleDateString("pt-BR")}</div>
+    ${r.map(x=>`<div class="history-row"><span>${x.exercise}</span><small>${x.sets[0].weight||"-"} kg × ${x.sets[0].reps||"-"}</small></div>`).join("")}
+  </div>`).join("");
+}
+
+function exerciseSeries(ex){
+  const rows=data.filter(x=>x.exercise===ex).map(x=>({date:x.date,value:Number(x.sets?.[0]?.weight)||0})).filter(x=>x.value>0);
+  const byDate={};rows.forEach(x=>byDate[x.date]=Math.max(byDate[x.date]||0,x.value));
+  return Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,value])=>({date,value}));
+}
+function lineChart(points,unit){
+  if(points.length<2)return '<div class="empty">Registre pelo menos 2 datas para gerar o gráfico.</div>';
+  const W=640,H=220,pad={l:42,r:14,t:16,b:36};
+  const vals=points.map(p=>p.value),min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  const x=i=>pad.l+i*((W-pad.l-pad.r)/(points.length-1));
+  const y=v=>pad.t+(max-v)*(H-pad.t-pad.b)/span;
+  const path=points.map((p,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(p.value).toFixed(1)).join(" ");
+  const area=path+` L ${x(points.length-1)},${H-pad.b} L ${x(0)},${H-pad.b} Z`;
+  const grid=[0,.25,.5,.75,1].map(t=>{
+    const yy=pad.t+t*(H-pad.t-pad.b),v=(max-t*span).toFixed(1);
+    return `<line class="chart-grid" x1="${pad.l}" x2="${W-pad.r}" y1="${yy}" y2="${yy}"/><text class="chart-label" x="4" y="${yy+4}">${v}</text>`;
+  }).join("");
+  const dots=points.map((p,i)=>`<circle class="chart-dot" cx="${x(i)}" cy="${y(p.value)}" r="4"><title>${new Date(p.date+"T12:00:00").toLocaleDateString("pt-BR")}: ${p.value} ${unit}</title></circle>`).join("");
+  const labels=points.map((p,i)=>i===0||i===points.length-1||points.length<=5?`<text class="chart-label" x="${x(i)}" y="${H-10}" text-anchor="${i===0?"start":i===points.length-1?"end":"middle"}">${new Date(p.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}</text>`:"").join("");
+  return `<div class="chart-wrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img"><path class="chart-area" d="${area}"/>${grid}<path class="chart-line" d="${path}"/>${dots}${labels}</svg></div>`;
+}
+function evolucao(a){
+  const names=[...new Set(data.map(x=>x.exercise))].sort();
+  if(!names.length)return a.innerHTML='<div class="section-title">📈 Evolução</div><div class="empty">Registre treinos para acompanhar sua evolução.</div>';
+  if(!selectedExercise||!names.includes(selectedExercise))selectedExercise=names[0];
+  const series=exerciseSeries(selectedExercise),max=series.length?Math.max(...series.map(x=>x.value)):0,last=series.length?series.at(-1).value:0;
+  a.innerHTML=`<div class="section-title">📈 Evolução de carga</div>
+    <div class="card"><div class="field"><label>Exercício</label><select onchange="selectedExercise=this.value;render()">${names.map(n=>`<option ${n===selectedExercise?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div class="grid"><div class="stat"><span class="muted">Maior carga</span><b>${max||"—"}${max?" kg":""}</b></div><div class="stat"><span class="muted">Última carga</span><b>${last||"—"}${last?" kg":""}</b></div></div>
+    ${lineChart(series,"kg")}</div>`;
+}
+
+function medidas(a){
+  const sorted=measures.slice().sort((x,y)=>x.date.localeCompare(y.date)),latest=sorted.at(-1);
+  const weightSeries=sorted.filter(x=>Number(x.weight)>0).map(x=>({date:x.date,value:Number(x.weight)}));
+  a.innerHTML=`<div class="section-title">📏 Peso e medidas</div>
+  <div class="card">
+    <div class="title">Novo registro</div>
+    <div class="field"><label>Data</label><input id="mdate" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="measure-grid">
+      ${measureField("weight","Peso","kg")}
+      ${measureField("waist","Cintura","cm")}
+      ${measureField("abdomen","Abdômen","cm")}
+      ${measureField("chest","Peito","cm")}
+      ${measureField("arm","Braço","cm")}
+      ${measureField("hip","Quadril","cm")}
+      ${measureField("thigh","Coxa","cm")}
+      ${measureField("calf","Panturrilha","cm")}
+    </div>
+    <button class="btn green" style="width:100%;margin-top:10px" onclick="saveMeasure()">💾 Salvar medidas</button>
+  </div>
+  <div class="card"><div class="title">Evolução do peso</div>
+    ${latest&&latest.weight?`<div class="grid"><div class="stat"><span class="muted">Peso atual</span><b>${latest.weight} kg</b></div><div class="stat"><span class="muted">Registros</span><b>${weightSeries.length}</b></div></div>`:""}
+    ${lineChart(weightSeries,"kg")}
+  </div>
+  ${sorted.length?`<div class="card"><div class="title">Histórico de medidas</div>${sorted.slice().reverse().map(m=>`<div class="history-row"><div><b>${new Date(m.date+"T12:00:00").toLocaleDateString("pt-BR")}</b><div class="meta">${formatMeasures(m)}</div></div><button class="btn red" style="padding:7px 10px" onclick="removeMeasure('${m.id}')">🗑</button></div>`).join("")}</div>`:""}`;
+}
+function measureField(id,label,unit){return `<div class="field"><label>${label} (${unit})</label><input id="m_${id}" type="number" inputmode="decimal" step="0.1" placeholder="0,0"></div>`}
+function numValue(id){const v=document.getElementById(id).value.replace(",",".");return v?Number(v):null}
+function saveMeasure(){
+  const rec={id:Date.now().toString(),date:document.getElementById("mdate").value,weight:numValue("m_weight"),waist:numValue("m_waist"),abdomen:numValue("m_abdomen"),chest:numValue("m_chest"),arm:numValue("m_arm"),hip:numValue("m_hip"),thigh:numValue("m_thigh"),calf:numValue("m_calf")};
+  if(!rec.date)return alert("Informe a data.");
+  if(!Object.entries(rec).some(([k,v])=>!["id","date"].includes(k)&&v!==null))return alert("Preencha pelo menos uma medida.");
+  measures.push(rec);saveMeasures();alert("Medidas salvas neste iPhone!");render();
+}
+function removeMeasure(id){if(!confirm("Excluir este registro?"))return;measures=measures.filter(x=>x.id!==id);saveMeasures();render()}
+function formatMeasures(m){
+  const labels={weight:["Peso","kg"],waist:["Cintura","cm"],abdomen:["Abdômen","cm"],chest:["Peito","cm"],arm:["Braço","cm"],hip:["Quadril","cm"],thigh:["Coxa","cm"],calf:["Panturrilha","cm"]};
+  return Object.entries(labels).filter(([k])=>m[k]!=null).map(([k,[l,u]])=>`${l}: ${m[k]} ${u}`).join(" · ");
+}
+
+function editExercise(day,i){let e=workouts[day].ex[i];let name=prompt("Nome do exercício:",e[0]);if(name===null)return;name=name.trim();if(!name)return;let sets=prompt("Número de séries:",e[1]);if(sets===null)return;let reps=prompt(e[0].toLowerCase().includes("prancha")?"Segundos:":"Repetições:",e[2]);if(reps===null)return;workouts[day].ex[i]=[name,Number(sets)||e[1],Number(reps)||e[2]];persistPlan();render()}
+function removeExercise(day,i){if(!confirm(`Remover "${workouts[day].ex[i][0]}"?`))return;workouts[day].ex.splice(i,1);persistPlan();render()}
+function addExercise(day){let name=prompt("Nome do novo exercício:");if(!name)return;let sets=Number(prompt("Número de séries:","3"))||3;let reps=Number(prompt("Repetições (ou segundos):","10"))||10;workouts[day].ex.push([name.trim(),sets,reps]);persistPlan();render()}
+function addWorkoutDay(){let letter=prompt("Identificador do novo treino (ex: D):","");if(!letter)return;letter=letter.trim().toUpperCase();if(workouts[letter])return alert("Já existe um treino com esse identificador.");let name=prompt("Nome do treino (opcional):","")||"";workouts[letter]={name,ex:[]};dayOrder.push(letter);current=letter;persistPlan();render()}
+function renameWorkoutDay(day){let name=prompt("Nome do Treino "+day+":",workouts[day].name||"");if(name===null)return;workouts[day].name=name.trim();persistPlan();render()}
+function removeWorkoutDay(day){if(dayOrder.length<=1)return alert("Você precisa manter ao menos um treino.");if(!confirm("Remover o Treino "+day+" inteiro? O histórico não será apagado."))return;delete workouts[day];dayOrder=dayOrder.filter(d=>d!==day);if(current===day)current=dayOrder[0];persistPlan();render()}
+function resetWorkouts(){if(!confirm("Restaurar os treinos A/B/C para o padrão original? Seu histórico não será apagado."))return;workouts=JSON.parse(JSON.stringify(DEFAULT_WORKOUTS));dayOrder=DEFAULT_DAY_ORDER.slice();current=dayOrder[0];persistPlan();render()}
+function personalTab(a){
+  let h='<div class="section-title">🧑‍🏫 Editar treinos</div>';
+  dayOrder.forEach(day=>{
+    let w=workouts[day];
+    h+=`<div class="card"><div class="title" style="display:flex;justify-content:space-between;align-items:center">Treino ${day}${w.name?" — "+w.name:""}<button class="btn secondary" style="padding:5px 9px" onclick="renameWorkoutDay('${day}')">✎ nome</button></div>`;
+    w.ex.forEach((e,i)=>h+=`<div class="history-row"><div>${e[0]} <span class="muted">(${e[1]}×${e[2]})</span></div><div><button class="btn secondary" style="padding:5px 9px" onclick="editExercise('${day}',${i})">✎</button> <button class="btn red" style="padding:5px 9px" onclick="removeExercise('${day}',${i})">🗑</button></div></div>`);
+    h+=`<div class="actions"><button class="btn secondary" onclick="addExercise('${day}')">+ Exercício</button><button class="btn red" onclick="removeWorkoutDay('${day}')">🗑 Remover treino</button></div></div>`;
+  });
+  h+='<div class="card"><button class="setting" onclick="addWorkoutDay()">+ Adicionar novo treino (D, E...)</button><button class="setting" onclick="resetWorkouts()">🔄 Restaurar treinos A/B/C padrão</button></div>';
+  a.innerHTML=h;
+}
+
+function configPage(a){
+  a.innerHTML=`<div class="section-title">⚙️ Configurações</div>
+  <div class="card"><div class="title">Aplicativo local</div><div class="meta">Seus treinos e medidas ficam salvos somente neste aparelho. Não é necessário login nem banco de dados.</div></div>
+  <div class="card"><div class="title">Tela de Início do iPhone</div><div class="meta">Abra pelo Safari → Compartilhar → Adicionar à Tela de Início. Depois abra pelo novo ícone.</div></div>
+  <div class="card"><div class="title">Dados locais</div><div class="meta">${data.length} séries de treino e ${measures.length} registros de medidas neste aparelho.</div>
+    <button class="setting" onclick="exportData()">📤 Exportar backup</button>
+    <button class="setting" onclick="deleteAllLocal()">🗑️ Apagar todos os dados</button>
+  </div>`;
+}
+function exportData(){
+  const backup={version:1,exportedAt:new Date().toISOString(),workouts,dayOrder,data,measures};
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="meu-treino-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),500);
+}
+function deleteAllLocal(){
+  if(!confirm("Apagar TODOS os treinos, histórico e medidas deste iPhone?"))return;
+  localStorage.removeItem("meuTreinoV2");localStorage.removeItem("meuTreinoMedidas");localStorage.removeItem("meuTreinoWorkouts");localStorage.removeItem("meuTreinoDayOrder");
+  data=[];measures=[];workouts=JSON.parse(JSON.stringify(DEFAULT_WORKOUTS));dayOrder=DEFAULT_DAY_ORDER.slice();current="A";render();
+}
+render();
+</script>
+</body>
+</html>
